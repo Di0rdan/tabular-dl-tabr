@@ -23,6 +23,7 @@ def main(
     function: Optional[str] = None,
     change_data_seed: int = False,
     change_eval_seed: int = True,
+    n_epochs: float = float('inf'),
     *,
     force: bool = False,
 ):
@@ -38,14 +39,18 @@ def main(
 
         if change_eval_seed:
             if change_data_seed:
-                path = path.with_name(path.name.replace('tuning', 'evaluation_seed_on_eval_data'))
+                storage_name = path.name.replace('tuning', 'evaluation_seed_on_eval_data')
             else:
-                path = path.with_name(path.name.replace('tuning', 'evaluation'))
+                storage_name = path.name.replace('tuning', 'evaluation')
         else:
             if change_data_seed:
-                path = path.with_name(path.name.replace('tuning', 'evaluation_seed_on_data'))
+                storage_name = path.name.replace('tuning', 'evaluation_seed_on_data')
             else:
                 raise Exception(f'one of change_data_seed or change_eval_seed must be True')
+
+        if n_epochs != float('inf'):
+            storage_name += f'_epochs_{n_epochs}'
+        path = path.with_name(storage_name)
 
         path.mkdir(exist_ok=True)
     else:
@@ -63,6 +68,7 @@ def main(
             config['seed'] = seed
         if change_data_seed:
             config['data']['seed'] = seed
+        config['n_epochs'] = n_epochs
 
         
         if 'catboost' in function_qualname:
