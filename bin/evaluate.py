@@ -21,6 +21,9 @@ def main(
     path: Path,
     n_seeds: int = 15,
     function: Optional[str] = None,
+    change_data_seed: int = False,
+    change_eval_seed: int = True,
+    n_epochs: float = float('inf'),
     *,
     force: bool = False,
 ):
@@ -34,7 +37,21 @@ def main(
         function_qualname = tuning_report['config']['function']
         template_config = tuning_report['best']['config']
 
-        path = path.with_name(path.name.replace('tuning', 'evaluation'))
+        if change_eval_seed:
+            if change_data_seed:
+                storage_name = path.name.replace('tuning', 'evaluation_seed_on_eval_data')
+            else:
+                storage_name = path.name.replace('tuning', 'evaluation')
+        else:
+            if change_data_seed:
+                storage_name = path.name.replace('tuning', 'evaluation_seed_on_data')
+            else:
+                raise Exception(f'one of change_data_seed or change_eval_seed must be True')
+
+        if n_epochs != float('inf'):
+            storage_name += f'_epochs_{n_epochs}'
+        path = path.with_name(storage_name)
+
         path.mkdir(exist_ok=True)
     else:
         from_tuning = False
@@ -46,7 +63,14 @@ def main(
     function_: lib.Function = lib.import_(function_qualname)
     for seed in range(n_seeds):
         config = deepcopy(template_config)
-        config['seed'] = seed
+
+        if change_eval_seed:
+            config['seed'] = seed
+        if change_data_seed:
+            config['data']['seed'] = seed
+        config['n_epochs'] = n_epochs
+
+        
         if 'catboost' in function_qualname:
             if config['model']['task_type'] == 'GPU':
                 config['model']['task_type'] = 'CPU'  # this is crucial for good results
